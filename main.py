@@ -196,32 +196,32 @@ def main_loop():
                 seen_ids.add(item_id)
                 save_seen_ids()
 
-    # Main loop
+# Main loop
     while True:
         try:
             limiteds = get_limiteds()
             if not limiteds:
                 time.sleep(CHECK_INTERVAL)
                 continue
-
+    
             first_item = limiteds[0]
             item_id = str(first_item.get("id"))
-
+    
             if not item_id or item_id in seen_ids:
                 time.sleep(CHECK_INTERVAL)
                 continue
-
+    
             details = get_item_details(item_id)
             if not details:
                 time.sleep(CHECK_INTERVAL)
                 continue
-
+    
             send_webhook(item_id, details["name"], details["price"], details["restrictions"])
             seen_ids.add(item_id)
             save_seen_ids()
-
+    
             time.sleep(CHECK_INTERVAL)
-
+    
         except Exception as e:
             print(f"[ERROR] {e}")
             time.sleep(5)
