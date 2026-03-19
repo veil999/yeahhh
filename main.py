@@ -44,10 +44,7 @@ HEADERS = {
 
 USE_PROXY = False
 HTTP_PROXY = "http://TV4GO0:1Z7dhD8iey@188.130.129.54:5500"
-
-PROXIES = {
-    "http": HTTP_PROXY,
-} if USE_PROXY else None
+PROXIES = {"http": HTTP_PROXY} if USE_PROXY else None
 
 DEBUG_MODE = False
 
@@ -112,31 +109,26 @@ def get_item_details(item_id):
         if not data:
             return None
         d = data[0]
+        restrictions_list = d.get("itemRestrictions", [])
+        restrictions = ", ".join([EMOJIS["type"].get(r, r) for r in restrictions_list]) if restrictions_list else "None"
         return {
             "name": d.get("name", "Unknown"),
             "price": d.get("price", "N/A"),
-            "restrictions": ", ".join(d.get("itemRestrictions", [])) or "None"
+            "restrictions": restrictions
         }
     except:
         return None
 
 def send_webhook(item_id, name, price, restrictions):
     link = f"https://www.pekora.zip/catalog/{item_id}/LIMITED"
-    payload = {
-        "content": PING_MESSAGE,
-        "embeds": [{
-            "title": "New Limited Item Found!",
-            "url": link,
-            "color": EMBED_COLOR,
-            "fields": [
-                {"name": "Name", "value": name, "inline": False},
-                {"name": "Price", "value": str(price), "inline": True},
-                {"name": "Type", "value": restrictions, "inline": True},
-                {"name": "ID", "value": str(item_id), "inline": False}
-            ],
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }]
-    }
+    fields = [
+        {"name": f"{EMOJIS['name']} Name", "value": name, "inline": False},
+        {"name": f"{EMOJIS['price']} Price", "value": f"{price} $", "inline": True},
+        {"name": f"{EMOJIS['type'].get(restrictions, '🪦')} Type", "value": restrictions, "inline": True},
+        {"name": f"{EMOJIS['id']} ID", "value": str(item_id), "inline": False},
+        {"name": f"{EMOJIS['link']} Catalog", "value": f"[Open in catalog]({link})", "inline": False}
+    ]
+    payload = {"content": PING_MESSAGE, "embeds": [{"title": f"{EMOJIS['title']} New Limited Item Found!", "url": link, "color": EMBED_COLOR, "fields": fields, "timestamp": datetime.now(timezone.utc).isoformat()}]}
     try:
         requests.post(WEBHOOK_URL, json=payload, timeout=8, proxies=PROXIES)
     except:
@@ -144,30 +136,24 @@ def send_webhook(item_id, name, price, restrictions):
 
 def main_loop():
     load_seen_ids()
-
     while True:
         try:
             limiteds = get_limiteds()
             if not limiteds:
                 time.sleep(CHECK_INTERVAL)
                 continue
-
             item_id = str(limiteds[0].get("id"))
             if not item_id or item_id in seen_ids:
                 time.sleep(CHECK_INTERVAL)
                 continue
-
             details = get_item_details(item_id)
             if not details:
                 time.sleep(CHECK_INTERVAL)
                 continue
-
             send_webhook(item_id, details["name"], details["price"], details["restrictions"])
             seen_ids.add(item_id)
             save_seen_ids()
-
             time.sleep(CHECK_INTERVAL)
-
         except Exception as e:
             print("Loop error:", e)
             time.sleep(5)
