@@ -62,7 +62,7 @@ EMOJIS = {
     "link": "<:chainlock:1391363049146945616>"
 }
 
-EMBED_COLOR = 0xC1BE8B
+EMBED_COLOR = 0x9295BA
 PING_MESSAGE = "@everyone son"
 
 seen_ids = set()
