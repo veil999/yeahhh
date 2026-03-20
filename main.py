@@ -60,7 +60,7 @@ EMOJIS = {
     "link": "<:chainlock:1391363049146945616>"
 }
 
-EMBED_COLOR = 0xA2E3C4
+EMBED_COLOR = 0xB597A8
 PING_MESSAGE = "@everyone son"
 
 seen_ids = set()
@@ -120,7 +120,7 @@ def get_item_details(item_id):
         return None
 
 def send_webhook(item_id, name, price, restrictions):
-    link = f"https://www.pekora.zip/catalog/{item_id}/LIMITED"
+    link = f"https://www.pekora.zip/catalog/{item_id}/x_x"
     fields = [
         {"name": f"{EMOJIS['name']} Name", "value": name, "inline": False},
         {"name": f"{EMOJIS['price']} Price", "value": f"{price} $", "inline": True},
@@ -128,7 +128,7 @@ def send_webhook(item_id, name, price, restrictions):
         {"name": f"{EMOJIS['id']} ID", "value": str(item_id), "inline": False},
         {"name": f"{EMOJIS['link']} Catalog", "value": f"[=================]({link})", "inline": False}
     ]
-    payload = {"content": PING_MESSAGE, "embeds": [{"title": f"{EMOJIS['title']} u_u", "url": link, "color": EMBED_COLOR, "fields": fields, "timestamp": datetime.now(timezone.utc).isoformat()}]}
+    payload = {"content": PING_MESSAGE, "embeds": [{"title": f"{EMOJIS['title']} x_x", "url": link, "color": EMBED_COLOR, "fields": fields, "timestamp": datetime.now(timezone.utc).isoformat()}]}
     try:
         requests.post(WEBHOOK_URL, json=payload, timeout=8, proxies=PROXIES)
     except:
