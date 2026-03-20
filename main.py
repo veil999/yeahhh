@@ -9,6 +9,7 @@ import json
 import os
 from datetime import datetime, timezone
 import shutil
+import threading
 
 MIDNIGHT_BLUE = "\033[38;2;50;70;168m"
 RESET = "\033[0m"
@@ -47,7 +48,7 @@ USE_PROXY = False
 HTTP_PROXY = "http://TV4GO0:1Z7dhD8iey@188.130.129.54:5500"
 PROXIES = {"http": HTTP_PROXY} if USE_PROXY else None
 
-DEBUG_MODE = False
+DEBUG_MODE = True
 
 EMOJIS = {
     "title": "<:Koroneicon:1412988880478539919>",
@@ -120,6 +121,12 @@ def get_item_details(item_id):
     except:
         return None
 
+def send_request(url, payload):
+    try:
+        requests.post(url, json=payload, timeout=8, proxies=PROXIES)
+    except:
+        pass
+
 def send_webhook(item_id, name, price, restrictions):
     link = f"https://www.pekora.zip/catalog/{item_id}/x_x"
     
@@ -131,7 +138,6 @@ def send_webhook(item_id, name, price, restrictions):
         {"name": f"{EMOJIS['link']} Catalog", "value": f"[=================]({link})", "inline": False}
     ]
 
-    # First webhook (existing)
     payload1 = {
         "content": PING_MESSAGE,
         "embeds": [{
@@ -143,7 +149,6 @@ def send_webhook(item_id, name, price, restrictions):
         }]
     }
 
-    # Second webhook (new)
     payload2 = {
         "content": PING_MESSAGE,
         "embeds": [{
@@ -156,9 +161,9 @@ def send_webhook(item_id, name, price, restrictions):
     }
 
     try:
-        requests.post(WEBHOOK_URL, json=payload1, timeout=8, proxies=PROXIES)
+        threading.Thread(target=send_request, args=(WEBHOOK_URL, payload1)).start()
         if WEBHOOK_URL_2:
-            requests.post(WEBHOOK_URL_2, json=payload2, timeout=8, proxies=PROXIES)
+            threading.Thread(target=send_request, args=(WEBHOOK_URL_2, payload2)).start()
     except:
         pass
 
