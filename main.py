@@ -32,6 +32,7 @@ def print_startup_banner():
     print(fetching_text.center(terminal_width))
 
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+WEBHOOK_URL_2 = os.getenv("WEBHOOK_URL_2")
 CHECK_INTERVAL = 0.5
 SEARCH_URL = "https://www.pekora.zip/apisite/catalog/v1/search/items?category=Collectibles&limit=28&sortType=3"
 DETAILS_URL = "https://www.pekora.zip/apisite/catalog/v1/catalog/items/details"
@@ -121,6 +122,7 @@ def get_item_details(item_id):
 
 def send_webhook(item_id, name, price, restrictions):
     link = f"https://www.pekora.zip/catalog/{item_id}/x_x"
+    
     fields = [
         {"name": f"{EMOJIS['name']} Name", "value": name, "inline": False},
         {"name": f"{EMOJIS['price']} Price", "value": f"{price} $", "inline": True},
@@ -128,9 +130,35 @@ def send_webhook(item_id, name, price, restrictions):
         {"name": f"{EMOJIS['id']} ID", "value": str(item_id), "inline": False},
         {"name": f"{EMOJIS['link']} Catalog", "value": f"[=================]({link})", "inline": False}
     ]
-    payload = {"content": PING_MESSAGE, "embeds": [{"title": f"{EMOJIS['title']} x_x", "url": link, "color": EMBED_COLOR, "fields": fields, "timestamp": datetime.now(timezone.utc).isoformat()}]}
+
+    # First webhook (existing)
+    payload1 = {
+        "content": PING_MESSAGE,
+        "embeds": [{
+            "title": f"{EMOJIS['title']} x_x",
+            "url": link,
+            "color": EMBED_COLOR,
+            "fields": fields,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }]
+    }
+
+    # Second webhook (new)
+    payload2 = {
+        "content": PING_MESSAGE,
+        "embeds": [{
+            "title": f"{EMOJIS['title']} u_u",
+            "url": link,
+            "color": 0xA2E3C4,
+            "fields": fields,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }]
+    }
+
     try:
-        requests.post(WEBHOOK_URL, json=payload, timeout=8, proxies=PROXIES)
+        requests.post(WEBHOOK_URL, json=payload1, timeout=8, proxies=PROXIES)
+        if WEBHOOK_URL_2:
+            requests.post(WEBHOOK_URL_2, json=payload2, timeout=8, proxies=PROXIES)
     except:
         pass
 
