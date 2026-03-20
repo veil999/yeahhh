@@ -60,7 +60,7 @@ EMOJIS = {
     "link": "<:chainlock:1391363049146945616>"
 }
 
-EMBED_COLOR = 0x3246A8
+EMBED_COLOR = 0xA2E3C4
 PING_MESSAGE = "@everyone son"
 
 seen_ids = set()
@@ -126,9 +126,9 @@ def send_webhook(item_id, name, price, restrictions):
         {"name": f"{EMOJIS['price']} Price", "value": f"{price} $", "inline": True},
         {"name": f"{EMOJIS['type'].get(restrictions, '🪦')} Type", "value": restrictions, "inline": True},
         {"name": f"{EMOJIS['id']} ID", "value": str(item_id), "inline": False},
-        {"name": f"{EMOJIS['link']} Catalog", "value": f"[Open in catalog]({link})", "inline": False}
+        {"name": f"{EMOJIS['link']} Catalog", "value": f"[=================]({link})", "inline": False}
     ]
-    payload = {"content": PING_MESSAGE, "embeds": [{"title": f"{EMOJIS['title']} New Limited Item Found!", "url": link, "color": EMBED_COLOR, "fields": fields, "timestamp": datetime.now(timezone.utc).isoformat()}]}
+    payload = {"content": PING_MESSAGE, "embeds": [{"title": f"{EMOJIS['title']} u_u", "url": link, "color": EMBED_COLOR, "fields": fields, "timestamp": datetime.now(timezone.utc).isoformat()}]}
     try:
         requests.post(WEBHOOK_URL, json=payload, timeout=8, proxies=PROXIES)
     except:
