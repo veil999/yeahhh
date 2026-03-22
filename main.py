@@ -111,12 +111,16 @@ def get_item_details(item_id):
         if not data:
             return None
         d = data[0]
+
         restrictions_list = d.get("itemRestrictions", [])
         restrictions = ", ".join([EMOJIS["type"].get(r, r) for r in restrictions_list]) if restrictions_list else "None"
+
+        units = d.get("unitsAvailableForConsumption", "N/A")
         return {
             "name": d.get("name", "Unknown"),
             "price": d.get("price", "N/A"),
-            "restrictions": restrictions
+            "restrictions": restrictions,
+            "units": units
         }
     except:
         return None
@@ -127,14 +131,15 @@ def send_request(url, payload):
     except:
         pass
 
-def send_webhook(item_id, name, price, restrictions):
-    link = f"https://www.pekora.zip/catalog/{item_id}/x_x"
+def send_webhook(item_id, name, price, restrictions, units):
+    link = f"https://www.pekora.zip/catalog/{item_id}/qqqqqqqq"
     
     fields = [
         {"name": f"{EMOJIS['name']} Name", "value": name, "inline": False},
         {"name": f"{EMOJIS['price']} Price", "value": f"{price} $", "inline": True},
         {"name": f"{EMOJIS['type'].get(restrictions, '🪦')} Type", "value": restrictions, "inline": True},
         {"name": f"{EMOJIS['id']} ID", "value": str(item_id), "inline": False},
+        {"name": "📦 Units", "value": str(units), "inline": True},    
         {"name": f"{EMOJIS['link']} Catalog", "value": f"[=================]({link})", "inline": False}
     ]
 
@@ -183,7 +188,7 @@ def main_loop():
             if not details:
                 time.sleep(CHECK_INTERVAL)
                 continue
-            send_webhook(item_id, details["name"], details["price"], details["restrictions"])
+            send_webhook(item_id, details["name"], details["price"], details["restrictions"], details["units"])
             seen_ids.add(item_id)
             save_seen_ids()
             time.sleep(CHECK_INTERVAL)
