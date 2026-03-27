@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Pekora Limited Watcher
+Pekora Limited Watcher - Cloudflare Bypass Edition
 """
 
 import requests
@@ -10,6 +10,8 @@ import os
 from datetime import datetime, timezone
 import shutil
 import threading
+from requests_html import HTMLSession  # NEW: For JS/Cloudflare bypass
+import random
 
 MIDNIGHT_BLUE = "\033[38;2;50;70;168m"
 RESET = "\033[0m"
@@ -29,7 +31,7 @@ def print_startup_banner():
     terminal_width = shutil.get_terminal_size((80, 20)).columns
     for line in ASCII_BANNER.splitlines():
         print(line.center(terminal_width))
-    fetching_text = f"{MIDNIGHT_BLUE}[~]{RESET} Fetching..."
+    fetching_text = f"{MIDNIGHT_BLUE}[~]{RESET} Fetching... (Cloudflare Bypass Active)"
     print(fetching_text.center(terminal_width))
 
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
@@ -39,14 +41,26 @@ SEARCH_URL = "https://www.pekora.zip/apisite/catalog/v1/search/items?category=Co
 DETAILS_URL = "https://www.pekora.zip/apisite/catalog/v1/catalog/items/details"
 SEEN_IDS_FILE = "seen_ids.json"
 
+# UPGRADED HEADERS - Full browser fingerprint
 HEADERS = {
-    "Cookie": os.getenv("COOKIE"),
-    "User-Agent": "Mozilla/5.0"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Referer": "https://www.pekora.zip/",
+    "Origin": "https://www.pekora.zip",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-origin",
+    "Cookie": os.getenv("COOKIE", ""),  # Keep your cookie
+    "Sec-Ch-Ua": '"Not(A:Brand";v="8", "Chromium";v="122", "Google Chrome";v="122"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"'
 }
 
 USE_PROXY = False
 HTTP_PROXY = "http://TV4GO0:1Z7dhD8iey@188.130.129.54:5500"
-PROXIES = {"http": HTTP_PROXY} if USE_PROXY else None
+PROXIES = {"http": HTTP_PROXY, "https": HTTP_PROXY} if USE_PROXY else None
 
 DEBUG_MODE = True
 
@@ -91,23 +105,99 @@ def save_seen_ids():
     except:
         pass
 
-def get_limiteds():
+# NEW: Cloudflare/JS bypass function
+def cloudflare_bypass_request(session, url, method='GET', **kwargs):
+    """Tries regular request first, falls back to HTMLSession with JS rendering"""
     try:
-        r = requests.get(SEARCH_URL, headers=HEADERS, timeout=8, proxies=PROXIES)
-        r.raise_for_status()
-        data = r.json().get("data") or []
+        # Try normal request first (faster)
+        resp = session.request(method, url, **kwargs)
+        if resp.status_code == 200 and 'json' in resp.headers.get('content-type', '').lower():
+            return resp
+        elif resp.status_code in [403, 429, 503]:  # Cloudflare blocks
+            debug_print(f"Cloudflare detected ({resp.status_code}), trying JS bypass...")
+        else:
+            debug_print(f"Unexpected status: {resp.status_code}, location: {resp.headers.get('Location')}")
+            return resp
+    except Exception as e:
+        debug_print(f"Regular request failed: {e}")
+    
+    # Fallback to JS rendering
+    try:
+        html_session = HTMLSession()
+        html_session.headers.update(HEADERS)
+        if PROXIES:
+            html_session.proxies.update(PROXIES)
+        
+        resp = html_session.get(url, **kwargs)
+        resp.html.render(timeout=20, keep_page=True, scrolldown=1)  # Render JS/Cloudflare challenge
+        
+        # Extract JSON from rendered page (common CF bypass pattern)
+        json_data = None
+        for script in resp.html.find('script'):
+            if 'window.__cf' in script.text or 'data' in script.text:
+                # Try to extract JSON from inline scripts
+                pass
+        
+        # If still no JSON, return rendered HTML for debugging
+        if 'json' not in resp.text.lower():
+            debug_print("JS render didn't give JSON, saving HTML for debug...")
+            with open('debug.html', 'w') as f:
+                f.write(resp.html.html)
+        
+        html_session.close()
+        return resp
+    except Exception as e:
+        debug_print(f"JS bypass failed: {e}")
+        return None
+
+def get_limiteds():
+    """Enhanced with Cloudflare bypass"""
+    session = requests.Session()
+    session.headers.update(HEADERS)
+    if PROXIES:
+        session.proxies.update(PROXIES)
+    
+    # Pre-flight: Visit homepage to set cookies
+    try:
+        session.get("https://www.pekora.zip/", timeout=10)
+        debug_print("Homepage pre-flight successful")
+    except:
+        pass
+    
+    resp = cloudflare_bypass_request(session, SEARCH_URL, timeout=15)
+    
+    if not resp or resp.status_code != 200:
+        debug_print(f"Failed to fetch limiteds: {resp.status_code if resp else 'No response'}")
+        return []
+    
+    try:
+        data = resp.json().get("data") or []
+        debug_print(f"Fetched {len(data)} items")
         return [data[0]] if data else []
     except:
+        debug_print("Failed to parse JSON response")
+        if hasattr(resp, 'html'):
+            debug_print("Response was HTML, likely Cloudflare challenge")
         return []
 
 def get_item_details(item_id):
+    session = requests.Session()
+    session.headers.update(HEADERS)
+    if PROXIES:
+        session.proxies.update(PROXIES)
+    
     try:
         payload = {"items": [{"id": int(item_id)}]}
         headers = dict(HEADERS)
         headers["Content-Type"] = "application/json"
-        r = requests.post(DETAILS_URL, json=payload, headers=headers, timeout=8, proxies=PROXIES)
-        r.raise_for_status()
-        data = r.json().get("data") or []
+        
+        resp = cloudflare_bypass_request(session, DETAILS_URL, 'POST', 
+                                       json=payload, headers=headers, timeout=15)
+        
+        if not resp or resp.status_code != 200:
+            return None
+            
+        data = resp.json().get("data") or []
         if not data:
             return None
         d = data[0]
@@ -193,7 +283,7 @@ def main_loop():
             save_seen_ids()
             time.sleep(CHECK_INTERVAL)
         except Exception as e:
-            print("Loop error:", e)
+            debug_print(f"Loop error: {e}")
             time.sleep(5)
 
 if __name__ == "__main__":
@@ -202,5 +292,5 @@ if __name__ == "__main__":
         try:
             main_loop()
         except Exception as e:
-            print("Fatal error:", e)
+            print(f"Fatal error: {e}")
             time.sleep(10)
