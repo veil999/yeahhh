@@ -4,7 +4,7 @@ Pekora Limited Watcher - Cloudflare Bypass (Lightweight)
 """
 
 import requests
-import cloudscraper  # Cloudflare bypass
+import cloudscraper  # Cloudflare bypassq
 import time
 import json
 import os
