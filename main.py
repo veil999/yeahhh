@@ -126,24 +126,22 @@ def create_scraper():
 
 def get_limiteds():
     scraper = create_scraper()
-    # After: resp = scraper.get(SEARCH_URL, timeout=15)
-    debug_print(f"RESPONSE HEADERS: {dict(resp.headers)}")
-    debug_print(f"FIRST 500 CHARS: {resp.text[:500]}")
     
     try:
         scraper.get("https://www.pekora.zip/", timeout=15)
         debug_print("Homepage cookies set")
-    except:
-        pass
+    except Exception as e:
+        debug_print(f"Homepage failed: {e}")
     
+    resp = None
     try:
         resp = scraper.get(SEARCH_URL, timeout=15)
         debug_print(f"Search status: {resp.status_code}, {len(resp.content)} bytes")
+        debug_print(f"Content-Type: {resp.headers.get('Content-Type', 'N/A')}")
+        debug_print(f"Location: {resp.headers.get('Location', 'N/A')}")
         
         if resp.status_code != 200:
-            debug_print(f"Failed: {resp.status_code}")
-            with open('debug_response.html', 'w') as f:
-                f.write(resp.text)
+            debug_print(f"Failed response: {resp.text[:300]}")
             return []
             
         data = resp.json().get("data") or []
@@ -151,12 +149,13 @@ def get_limiteds():
         return [data[0]] if data else []
         
     except json.JSONDecodeError:
-        debug_print("Not JSON - saved debug_response.html")
-        with open('debug_response.html', 'w') as f:
-            f.write(resp.text)
+        debug_print("NOT JSON - probably HTML/redirect")
+        debug_print(f"FIRST 500: {resp.text[:500]}")
         return []
     except Exception as e:
-        debug_print(f"Error: {e}")
+        debug_print(f"FULL ERROR: {e}")
+        if resp:
+            debug_print(f"Status: {resp.status_code}, Text preview: {resp.text[:200]}")
         return []
 
 def get_item_details(item_id):
